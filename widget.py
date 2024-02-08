@@ -1,8 +1,9 @@
 import sys
 import os
 import time
-from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QFileDialog, QProgressBar, QSlider
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QLabel, QPushButton, QVBoxLayout, QWidget, QFileDialog, QProgressBar, QSlider, QHBoxLayout
 from PySide6.QtCore import QCoreApplication, Qt
+from PySide6.QtGui import QPixmap
 from PIL import Image
 from io import BytesIO
 
@@ -11,7 +12,7 @@ class ImageEaseApp(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("ImageEase Compression")
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(100, 100, 800, 600)
 
         self.init_ui()
 
@@ -25,11 +26,14 @@ class ImageEaseApp(QMainWindow):
         self.upload_btn = QPushButton("Upload Image", self)
         self.compress_btn = QPushButton("Compress", self)
         self.exit_btn = QPushButton("Exit", self)
-        self.progress_bar = QProgressBar(self)  # Add progress bar
+        self.progress_bar = QProgressBar(self)
         # Add labels for displaying file sizes
         self.original_size_label = QLabel("Original Size: ", self)
         self.compressed_size_label = QLabel("Compressed Size: ", self)
         # Add a slider for adjusting compression quality
+        self.quality_label = QLabel("Quality:", self)
+        self.quality_label.setAlignment(Qt.AlignCenter)
+        self.quality_label.setStyleSheet("font-weight: bold;")
         self.quality_slider = QSlider(Qt.Horizontal)
         self.quality_slider.setMinimum(0)
         self.quality_slider.setMaximum(100)
@@ -37,17 +41,34 @@ class ImageEaseApp(QMainWindow):
         self.quality_slider.setTickInterval(5)
         self.quality_slider.setTickPosition(QSlider.TicksBelow)
         self.quality_slider.setSingleStep(1)
+        self.preview_label = QLabel(self)
+        self.preview_label.setAlignment(Qt.AlignCenter)
+        self.save_btn = QPushButton("Save", self)
+
+        # Set fixed width for buttons
+        self.upload_btn.setFixedWidth(150)
+        self.compress_btn.setFixedWidth(150)
+        self.exit_btn.setFixedWidth(150)
+        self.save_btn.setFixedWidth(150)
+
+        # Layout for quality label and slider
+        quality_layout = QVBoxLayout()
+        quality_layout.addWidget(self.quality_label)
+        quality_layout.addWidget(self.quality_slider)
+        quality_layout.setAlignment(Qt.AlignCenter)
 
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(self.label)
-        layout.addWidget(self.upload_btn)
-        layout.addWidget(self.compress_btn)
-        layout.addWidget(self.exit_btn)
-        layout.addWidget(self.progress_bar)  # Add progress bar to layout
+        layout.addWidget(self.upload_btn, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.compress_btn, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.exit_btn, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.progress_bar)
         layout.addWidget(self.original_size_label)
         layout.addWidget(self.compressed_size_label)
-        layout.addWidget(self.quality_slider)
+        layout.addLayout(quality_layout)
+        layout.addWidget(self.preview_label)
+        layout.addWidget(self.save_btn, alignment=Qt.AlignHCenter)
 
         container = QWidget()
         container.setLayout(layout)
@@ -58,6 +79,7 @@ class ImageEaseApp(QMainWindow):
         self.upload_btn.clicked.connect(self.upload_image)
         self.compress_btn.clicked.connect(self.compress_image)
         self.exit_btn.clicked.connect(self.close)
+        self.save_btn.clicked.connect(self.save_image)
 
     def upload_image(self):
         file_dialog = QFileDialog()
@@ -65,6 +87,7 @@ class ImageEaseApp(QMainWindow):
         if file_path:
             self.selected_image_path = file_path  # Store the selected image path
             self.label.setText("Selected Image: {}".format(file_path))
+            self.preview_label.clear()
         
     def compress_image(self):
         if hasattr(self, 'selected_image_path'):
@@ -103,24 +126,60 @@ class ImageEaseApp(QMainWindow):
                     # Update progress bar to show completion
                     self.progress_bar.setValue(buffer_length)
 
-                    # Save compressed image
-                    with open(image_path, 'wb') as f:
-                        f.write(compressed_image_bytes)
+                    # Display preview image
+                    preview_image = Image.open(BytesIO(compressed_image_bytes))
+                    preview_image = preview_image.resize((300, 300))  # Resize preview image for display
+                    preview_image_bytes = BytesIO()
+                    preview_image.save(preview_image_bytes, format='PNG')  # Convert preview image to PNG format
+                    pixmap = QPixmap()
+                    pixmap.loadFromData(preview_image_bytes.getvalue())
+                    self.preview_label.setPixmap(pixmap)
 
-                # Update label to indicate compression completion
-                self.label.setText("Image Compression Completed")
+                    # Display a pop-up window to indicate compression completion
+                    msg_box = QMessageBox()
+                    msg_box.setWindowTitle("Compression Completed")
+                    msg_box.setText("Completed Successfully.")
+                    msg_box.exec()
 
-                # Calculate compressed file size
-                compressed_size = len(compressed_image_bytes) / 1024
+                    # Update label to indicate compression completion
+                    self.label.setText("Image Compression Completed")
 
-                # Display original and compressed file sizes
-                self.original_size_label.setText(f"Original Size: {original_size:.2f} KB")
-                self.compressed_size_label.setText(f"Compressed Size: {compressed_size:.2f} KB")
+                    # Calculate compressed file size
+                    compressed_size = len(compressed_image_bytes) / 1024
+
+                    # Display original and compressed file sizes
+                    self.original_size_label.setText(f"Original Size: {original_size:.2f} KB")
+                    self.compressed_size_label.setText(f"Compressed Size: {compressed_size:.2f} KB")
             except Exception as e:
                 print("Error compressing image: {}".format(e))
                 self.label.setText("Error compressing image: {}".format(e))
         else:
             self.label.setText("No image selected for compression")
+
+    def save_image(self):
+        if hasattr(self, 'selected_image_path'):
+            file_dialog = QFileDialog()
+            file_path, _ = file_dialog.getSaveFileName(self, "Save Image", "", "Image Files (*.png *.jpg *.jpeg)")
+            if file_path:
+                image_path = self.selected_image_path
+                try:
+                    image = Image.open(image_path)
+                    quality = self.quality_slider.value()
+
+                    compressed_image = image.copy()
+                    with BytesIO() as buffer:
+                        compressed_image.save(buffer, format=image.format, quality=quality)
+                        compressed_image_bytes = buffer.getvalue()
+
+                        with open(file_path, 'wb') as f:
+                            f.write(compressed_image_bytes)
+
+                    self.label.setText("Image Saved Successfully")
+                except Exception as e:
+                    print("Error saving image: {}".format(e))
+                    self.label.setText("Error saving image: {}".format(e))
+        else:
+            self.label.setText("No image selected for saving")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

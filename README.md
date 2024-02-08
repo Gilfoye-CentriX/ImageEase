@@ -16,7 +16,7 @@ Requirements
 Usage
 1.	Install the required dependencies using pip:
 pip install PySide6 Pillow 
-2.	Run the application by executing the main.py file:
+2.	Run the application by executing the widget.py file:
 python main.py 
 3.	Use the GUI to select an image file, adjust the compression quality (if desired), and initiate the compression process.
 Important Note
