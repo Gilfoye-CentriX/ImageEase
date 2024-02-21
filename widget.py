@@ -2,7 +2,7 @@ import sys
 import os
 import time
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QLabel, QPushButton, QVBoxLayout, QWidget, QFileDialog, QProgressBar, QSlider, QHBoxLayout
-from PySide6.QtCore import QCoreApplication, Qt
+from PySide6.QtCore import QCoreApplication, Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PIL import Image
 from io import BytesIO
@@ -19,7 +19,7 @@ class ImageEaseApp(QMainWindow):
     def init_ui(self):
         # Widgets
         self.label = QLabel(self)
-        background_image_path = r'C:\Users\Centrix\Documents\Imageasy\background\ImageEase.jpg'
+        background_image_path = r'C:\Users\Centrix\Documents\GitHub\ImageEase\background\ImageEase.jpg'
         background_image_path_encoded = background_image_path.encode('utf-8').decode('latin1')
         self.label.setStyleSheet("QLabel { background-image: url('" + background_image_path_encoded + "'); background-repeat: no-repeat; background-position: center; }")
         self.label.setText("<html><div align='center'><font color='blue' size='7'><b>Welcome to ImageEase Compression</b></font></html>")
